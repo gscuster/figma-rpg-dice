@@ -21,4 +21,4 @@ If you wanted to roll two 20-sided die with a +3 modifier you'd input `2d20+3`
 
 In addition to basic dice (type `d`), fudge dice (type `dF`) are also supported.
 
-Example: `4dF` would indacte 4 fudge dice.
+Example: `4dF` would indicate 4 fudge dice.
