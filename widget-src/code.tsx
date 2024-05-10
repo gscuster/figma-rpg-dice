@@ -6,7 +6,11 @@ const { useSyncedState, usePropertyMenu, AutoLayout, Text, SVG, Input } = widget
 const rollRegExp = /(\d+)(df|dF|d)(\d+)?([+-]\d+)?/
 
 function parseRollString(rollString: string) {
-  const [raw, nDice, type, faces, modifier] = rollString.match(rollRegExp) || []
+  const [raw, nDice, type, faces, modifier] =
+    rollString
+      .replace(/\s/g, '')
+      .match(rollRegExp)
+    || []
   if (raw) {
     return {
       raw: raw,
