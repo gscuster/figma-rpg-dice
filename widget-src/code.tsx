@@ -3,28 +3,28 @@
 const { widget } = figma
 const { useSyncedState, usePropertyMenu, AutoLayout, Text, SVG, Input } = widget
 
-const rollRegExp = /(\d+)(df|dF|d)(\d+)?([+-]\d+)?/
+const rollRegExp = /([+-])?(\d+)((df|dF|d)(\d+)?)?/g
 
 function parseRollString(rollString: string) {
-  const [raw, nDice, type, faces, modifier] =
+  const matches =
     rollString
       .replace(/\s/g, '')
-      .match(rollRegExp)
-    || []
-  if (raw) {
-    return {
+      .matchAll(rollRegExp)
+  const diceArr = Array.from(matches).map(([raw, sign, n, _, type, faces]) => (
+    {
       raw: raw,
-      nDice: parseInt(nDice),
-      type: type,
+      sign: sign === '-' ? -1 : 1,
+      nDice: type ? parseInt(n) : 0,
+      type: type ? type : 'modifier',
       faces: faces ? parseInt(faces) : 0,
-      modifier: modifier ? parseInt(modifier) : 0
-    }
-  }
-  return null
+      modifier: type ? 0 : parseInt(n) || 0
+    }))
+  return diceArr
 }
 
 type Dice = {
   "raw": string,
+  "sign": number,
   "nDice": number,
   "type": string,
   "faces": number,
@@ -33,6 +33,7 @@ type Dice = {
 
 const defaultDice = {
   "raw": "1d6",
+  "sign": 1,
   "nDice": 1,
   "type": "d",
   "faces": 6,
@@ -55,14 +56,27 @@ function rollDice(dice: Dice) {
     values = Array(dice.nDice).fill(dice).map(rollStandard)
   }
   const result = values.reduce((x, y) => x + y, 0) + dice.modifier
-  return { result: result.toString(), values: values }
+  return {
+    result: dice.sign*result,
+    values: values,
+    valuesString: `\[${values.join(',')}\]`
+  }
+}
+
+function rollDiceArr(diceArr: Dice[]) {
+  const rolls = diceArr.map(rollDice)
+  return {
+    result: rolls.reduce((x, y) => x + y.result, 0).toString(),
+    values: rolls.map(a => a.values).filter(a => a.length > 0).join(','),
+    modifier: diceArr.map(a => a.modifier*a.sign).reduce((x, y) => x + y, 0)
+  }
 }
 
 function Widget() {
   const [color, setColor] = useSyncedState('color', '#91a6ff')
   const [rollString, setRollString] = useSyncedState('rollString', defaultDice.raw)
   const [validRollString, setValidRollString] = useSyncedState('validRollString', true)
-  const [dice, setDice] = useSyncedState('dice', defaultDice)
+  const [dice, setDice] = useSyncedState('dice', [defaultDice])
   const [output, setOutput] = useSyncedState('output', '')
 
   usePropertyMenu(
@@ -119,10 +133,17 @@ function Widget() {
      </svg>`}
         onClick={() => {
           if (validRollString) {
-            const { result, values } = rollDice(dice)
+            const { result, values, modifier } = rollDiceArr(dice)
             setOutput(result)
             const user = figma.currentUser ? figma.currentUser.name : 'User'
-            figma.notify(`${user} rolled ${dice.raw} for (${values}) = ${result}`)
+            let valuesString = `${user} rolled ${rollString} for (${values})`
+            if (modifier > 0) {
+              valuesString += `+${modifier}`
+            } else if (modifier < 0) {
+              valuesString += `${modifier}`
+            }
+            valuesString += ` = ${result}`
+            figma.notify(valuesString)
           }
         }}
         tooltip="Roll dice"
@@ -132,7 +153,7 @@ function Widget() {
         placeholder="1d6"
         onTextEditEnd={(e) => {
           const newDice = parseRollString(e.characters)
-          setValidRollString(Boolean(newDice))
+          setValidRollString(newDice.length > 0)
           setRollString(e.characters);
           if (newDice) {
             setDice(newDice)
@@ -154,7 +175,7 @@ function Widget() {
         fontSize={32}
         width={42}
         horizontalAlignText={'center'}
-        tooltip={`Result of rolling ${dice.raw}`}>
+        tooltip={`Result of rolling ${rollString}`}>
         {output}
       </Text>
     </AutoLayout>
