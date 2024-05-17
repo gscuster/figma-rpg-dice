@@ -172,7 +172,7 @@ function Widget() {
       />
       <Text
         fontSize={32}
-        width={42}
+        width={64}
         horizontalAlignText={'center'}
         tooltip={`Result of rolling ${rollString}`}>
         {output}
