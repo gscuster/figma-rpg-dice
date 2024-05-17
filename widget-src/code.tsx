@@ -58,8 +58,7 @@ function rollDice(dice: Dice) {
   const result = values.reduce((x, y) => x + y, 0) + dice.modifier
   return {
     result: dice.sign*result,
-    values: values,
-    valuesString: `\[${values.join(',')}\]`
+    values: values.map(a => a*dice.sign),
   }
 }
 
